@@ -34,13 +34,17 @@ SSDP_REQUEST = 'M-SEARCH * HTTP/1.1\r\n' + \
 
 
 _BASE_URL = "http://{}:{}{}"
-DeviceStatus = namedtuple("DeviceStatus", ["friendly_name"])
+DeviceStatus = namedtuple("DeviceStatus",
+                          ["friendly_name", "model_name",
+                           "manufacturer", "api_version", "dev_url"])
 
 AppStatus = namedtuple("AppStatus", ["app_id", "description", "state",
                                      "options", "link"])
 
 # Device status XML constants
+XML_NS_UPNP_DEVICE = "{urn:schemas-upnp-org:device-1-0}"
 XML_NS_DIAL = "{urn:dial-multiscreen-org:schemas:dial}"
+XML_NS_CAST = "{urn:chrome.google.com:cast}"
 
 class DialClient(requests.Session):
      """Client for easily sending DIAL requests to a server."""
@@ -160,26 +164,29 @@ class DialClient(requests.Session):
                     self.app_port = app_url.port
                     self.app_path = app_url.path
 
+               dev_url = app_url.hostname
+
                status_el = ET.fromstring(req.text.encode("UTF-8"))
 
                device_info_el = status_el.find(XML_NS_UPNP_DEVICE + "device")
 
-               # api_version_el = status_el.find(XML_NS_UPNP_DEVICE + "specVersion")
+               api_version_el = status_el.find(XML_NS_UPNP_DEVICE + "specVersion")
 
                friendly_name = _read_xml_element(device_info_el, XML_NS_UPNP_DEVICE,
                                           "friendlyName", "Unknown device")
-               # model_name = _read_xml_element(device_info_el, XML_NS_UPNP_DEVICE,
-               #                         "modelName", "Unknown model name")
-               # manufacturer = _read_xml_element(device_info_el, XML_NS_UPNP_DEVICE,
-               #                           "manufacturer",
-               #                           "Unknown manufacturer")
-               #
-               # api_version = (int(_read_xml_element(api_version_el,
-               #                               XML_NS_UPNP_DEVICE, "major", -1)),
-               #         int(_read_xml_element(api_version_el,
-               #                               XML_NS_UPNP_DEVICE, "minor", -1)))
+               model_name = _read_xml_element(device_info_el, XML_NS_UPNP_DEVICE,
+                                       "modelName", "Unknown model name")
+               manufacturer = _read_xml_element(device_info_el, XML_NS_UPNP_DEVICE,
+                                         "manufacturer",
+                                         "Unknown manufacturer")
 
-               return DeviceStatus(friendly_name)
+               api_version = (int(_read_xml_element(api_version_el,
+                                             XML_NS_UPNP_DEVICE, "major", -1)),
+                       int(_read_xml_element(api_version_el,
+                                             XML_NS_UPNP_DEVICE, "minor", -1)))
+
+               return DeviceStatus(friendly_name, model_name, manufacturer,
+                            api_version, dev_url)
 
           except (requests.exceptions.RequestException, ET.ParseError):
                return None
@@ -235,7 +242,7 @@ def discover(max_devices=None, timeout=DISCOVER_TIMEOUT, verbose=False):
 
                     if found_st == SSDP_ST and found_url:
                          devices.append(found_url)
-                         devices.append(found_wol)
+                         # devices.append(found_wol)
 
                          if max_devices and len(devices) == max_devices:
                               return devices
