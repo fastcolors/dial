@@ -1,7 +1,4 @@
 """Platform for sensor integration."""
-import asyncio
-import json
-
 import voluptuous as vol
 from homeassistant.helpers.entity import Entity
 from . import pydial
@@ -75,10 +72,6 @@ class DialSensor(Entity):
         """Fetch new state data for the sensor.
         This is the only method that should fetch new data for Home Assistant.
         """
-        server = url
-        client = pydial.DialClient(server)
-        device = client.get_device_description()
-        status = device.friendly_name
         self._state = status
         attributes['host'] = host
         attributes['port'] = port

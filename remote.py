@@ -3,9 +3,8 @@ import asyncio
 import json
 
 import voluptuous as vol
-from homeassistant.helpers.entity import Entity
 from . import pydial
-from homeassistant.components.sensor import PLATFORM_SCHEMA
+from homeassistant.components.remote import PLATFORM_SCHEMA
 from homeassistant.const import (CONF_HOST, CONF_PORT, CONF_FRIENDLY_NAME, CONF_ICON, CONF_NAME)
 from homeassistant.helpers.entity import Entity
 import homeassistant.helpers.config_validation as cv
@@ -21,6 +20,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_FRIENDLY_NAME): cv.string,
 })
 
+url = 'http://192.168.0.12:8008/ssdp/device-desc.xml'
 # servers = pydial.discover()
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
@@ -31,13 +31,13 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     icon = config.get(CONF_ICON)
     if not icon:
         icon = 'mdi:television'
-    server = 'http://192.168.0.12:8008/ssdp/device-desc.xml'
+    server = url
     client = pydial.DialClient(server)
     device = client.get_device_description()
     status = device.friendly_name
-    add_entities([DialSensor(name,host,port,icon,status)])
+    add_entities([DialRemote(name,host,port,icon,status)])
 
-class DialSensor(Entity):
+class DialRemote(Entity):
     """Representation of a Sensor."""
 
     def __init__(self,name,host,port,icon,status):
@@ -71,7 +71,7 @@ class DialSensor(Entity):
         """Return the state attributes of the sensor."""
         return self.custom_attributes
 
-    def update(self):
+    def async_update(self):
         """Fetch new state data for the sensor.
         This is the only method that should fetch new data for Home Assistant.
         """
