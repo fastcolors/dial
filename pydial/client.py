@@ -146,7 +146,8 @@ class DialClient(requests.Session):
                app_id = status.app_id
 
           if app_id:
-               req = self.delete(self._craft_app_url(app_id))
+               quit_url = _BASE_URL.format(self.app_host, self.app_port, self.app_path) + app_id
+               req = self.delete(quit_url)
                print (req)
 
      def get_device_description(self):

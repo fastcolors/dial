@@ -1,66 +1,78 @@
 """Platform for sensor integration."""
+import voluptuous as vol
 from homeassistant.helpers.entity import Entity
 from . import pydial
+from homeassistant.components.sensor import PLATFORM_SCHEMA
+from homeassistant.const import (CONF_HOST, CONF_PORT, CONF_FRIENDLY_NAME, CONF_ICON, CONF_NAME)
+from homeassistant.helpers.entity import Entity
+import homeassistant.helpers.config_validation as cv
+from time import time, sleep
 
-servers = pydial.discover()
-client = []
-device_tuple = []
-device = []
-url = []
-i = 0
-c = 0
-for item in servers:
-    sclient = pydial.DialClient(servers[i])
-    client.append(sclient)
-    description = client[i].get_device_description()
-    device_tuple.append(description)
-    device.append(device_tuple[i].friendly_name)
-    url.append(device_tuple[i].dev_url)
-    i += 1
+# REQUIREMENTS = ['pytuya==7.0.4']
+
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
+    vol.Required(CONF_HOST): cv.string,
+    vol.Required(CONF_PORT): cv.string,
+    vol.Required(CONF_NAME): cv.string,
+    vol.Optional(CONF_ICON): cv.icon,
+    vol.Optional(CONF_FRIENDLY_NAME): cv.string,
+})
+
+# servers = pydial.discover()
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the sensor platform."""
-    for item in servers:
-        add_entities([DialSensor()])
+    name = config.get(CONF_NAME)
+    host = config.get(CONF_HOST)
+    port = config.get(CONF_PORT)
+    icon = config.get(CONF_ICON)
+    if not icon:
+        icon = 'mdi:television'
+    server = 'http://192.168.0.12:8008/ssdp/device-desc.xml'
+    client = pydial.DialClient(server)
+    device = client.get_device_description()
+    status = device.friendly_name
+    add_entities([DialSensor(name,host,port,icon,status)])
 
 class DialSensor(Entity):
     """Representation of a Sensor."""
 
-    def __init__(self):
+    def __init__(self,name,host,port,icon,status):
         """Initialize the sensor."""
-        self._state = None
-        self.custom_attributes = {}
-        # self._url = None
+        self._state = status
+        self._name = name
+        self._icon = icon
+        self._port = port
+        attributes = {}
+        attributes['host'] = host
+        attributes['port'] = port
+        self.custom_attributes = attributes
 
     @property
     def name(self):
         """Return the name of the sensor."""
-        return 'Screen Name'
+        return self._name
 
     @property
     def icon(self):
         """Return the icon of the sensor."""
-        return 'mdi:television'
-
-    @property
-    def device_state_attributes(self):
-        """Return the state attributes of the sensor."""
-        return self.custom_attributes
+        return self._icon
 
     @property
     def state(self):
         """Return the state of the sensor."""
         return self._state
 
+    @property
+    def device_state_attributes(self):
+        """Return the state attributes of the sensor."""
+        return self.custom_attributes
+
     def update(self):
         """Fetch new state data for the sensor.
         This is the only method that should fetch new data for Home Assistant.
         """
-        c = 0
-        for item in servers:
-            self._state = device[c]
-            attributes = {}
-            attributes['mac'] = servers[c]
-            attributes['url'] = url[c]
-            self.custom_attributes = attributes
-            c += 1
+        self._state = status
+        attributes['host'] = host
+        attributes['port'] = port
+        self.custom_attributes = attributes
