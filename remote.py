@@ -53,13 +53,13 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     name = config.get(CONF_NAME)
     if not name:
         name = device.friendly_name
-    status = 'False'
-    add_entities([DialRemote(name,host,port,icon,status)])
+    status = 'off'
+    add_entities([DialRemote(name,host,port,mac,icon,status)])
 
 class DialRemote(Entity):
     """Representation of a Sensor."""
 
-    def __init__(self,name,host,port,icon,status):
+    def __init__(self,name,host,port,mac,icon,status):
         """Initialize the sensor."""
         self._state = status
         self._name = name
@@ -68,6 +68,7 @@ class DialRemote(Entity):
         attributes = {}
         attributes['host'] = host
         attributes['port'] = port
+        attributes['mac'] = mac
         self.custom_attributes = attributes
 
     @property
@@ -106,4 +107,4 @@ class DialRemote(Entity):
         """Fetch new state data for the sensor.
         This is the only method that should fetch new data for Home Assistant.
         """
-        self._state = 'False'
+        self._state = 'off'
