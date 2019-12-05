@@ -3,7 +3,7 @@ Module that implements a basic DIAL protocol client.
 Usage:
      import pydial
      servers = pydial.discover()
-     client = pydial.DialClient(servers[0])
+     client = pydial.DialClient(servers[0][0])
      device = client.get_device_description()
      client.launch_app('YouTube')
 
@@ -202,6 +202,7 @@ def discover(max_devices=None, timeout=DISCOVER_TIMEOUT, verbose=False):
      https://github.com/crimsdings/ChromeCast/blob/master/cc_discovery.py
      """
      devices = []
+     arriett = []
 
      start = dt.datetime.now()
 
@@ -220,9 +221,7 @@ def discover(max_devices=None, timeout=DISCOVER_TIMEOUT, verbose=False):
 
                if ready:
                     response = str(sock.recv(1024), 'utf-8')
-                    if verbose:
-                         print(response)
-                    found_url = found_st = found_wol = None
+                    found_url = found_st = found_wol = found_mac = None
                     headers = response.split("\r\n\r\n", 1)[0]
 
                     for header in headers.split("\r\n"):
@@ -238,15 +237,24 @@ def discover(max_devices=None, timeout=DISCOVER_TIMEOUT, verbose=False):
                          elif key == "ST":
                               found_st = value
 
+                         elif key == "SERVER":
+                              found_server = value
+
                          elif key == "WAKEUP":
-                              found_wol = value
+                              found_wol = value.split(";")
+                              wol_split = (found_wol[0].split("="))
+                              found_mac = wol_split[0]
 
                     if found_st == SSDP_ST and found_url:
-                         devices.append(found_url)
-                         # devices.append(found_wol)
-
-                         if max_devices and len(devices) == max_devices:
-                              return devices
+                        if found_mac:
+                            arriett.append(found_url)
+                            arriett.append(found_mac)
+                            devices.append(arriett)
+                        else:
+                            found_mac = '00:00:00:00:00'
+                            arriett.append(found_url)
+                            arriett.append(found_mac)
+                            devices.append(arriett)
 
      return devices
 

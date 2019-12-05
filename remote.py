@@ -1,6 +1,7 @@
 """Platform for sensor integration."""
 import asyncio
 import json
+import wakeonlan
 
 import voluptuous as vol
 from . import pydial
@@ -15,26 +16,44 @@ from time import time, sleep
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_HOST): cv.string,
     vol.Required(CONF_PORT): cv.string,
-    vol.Required(CONF_NAME): cv.string,
+    vol.Optional(CONF_NAME): cv.string,
     vol.Optional(CONF_ICON): cv.icon,
     vol.Optional(CONF_FRIENDLY_NAME): cv.string,
 })
 
-url = 'http://192.168.0.12:8008/ssdp/device-desc.xml'
-# servers = pydial.discover()
+servers = pydial.discover()
+# host = config.get(CONF_HOST)
+# for s in servers:
+#     if config.get(CONF_HOST) in str(servers[s]):
+#         server = servers[s][0]
+#         mac = servers[s][1]
+#     else:
+#         server = None
+#         mac = None
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the sensor platform."""
-    name = config.get(CONF_NAME)
     host = config.get(CONF_HOST)
+    count = 0
+    for s in servers:
+        if config.get(CONF_HOST) in str(servers[count]):
+            server = servers[count][0]
+            mac = servers[count][1]
+        else:
+            server = None
+            mac = None
+        count += 1
+    # server = config.get(CONF_HOST)
     port = config.get(CONF_PORT)
     icon = config.get(CONF_ICON)
     if not icon:
         icon = 'mdi:television'
-    server = url
     client = pydial.DialClient(server)
     device = client.get_device_description()
-    status = device.friendly_name
+    name = config.get(CONF_NAME)
+    if not name:
+        name = device.friendly_name
+    status = 'False'
     add_entities([DialRemote(name,host,port,icon,status)])
 
 class DialRemote(Entity):
@@ -71,15 +90,20 @@ class DialRemote(Entity):
         """Return the state attributes of the sensor."""
         return self.custom_attributes
 
+    def async_turn_on(self, **kwargs):
+        """Turn the device on."""
+        if self._broadcast_address:
+            wakeonlan.send_magic_packet(
+                self._mac_address, ip_address=self._broadcast_address
+            )
+        else:
+            wakeonlan.send_magic_packet(self._mac_address)
+
+    def async_turn_off(self, **kwargs):
+        """Turn the device off."""
+
     def async_update(self):
         """Fetch new state data for the sensor.
         This is the only method that should fetch new data for Home Assistant.
         """
-        server = url
-        client = pydial.DialClient(server)
-        device = client.get_device_description()
-        status = device.friendly_name
-        self._state = status
-        attributes['host'] = host
-        attributes['port'] = port
-        self.custom_attributes = attributes
+        self._state = 'False'
